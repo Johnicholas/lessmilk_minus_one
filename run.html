@@ -18,10 +18,15 @@ var score = 0
 var game = new Framework.Game(w, h, 'the_game', {
     play: {
       create: function () {
+        game.backgroundColor = '#34495e'
         this.keys = game.create_keys()
-        this.player = game.add_sprite(w/2, h/2)
-        this.player.collideWorldBounds = true // TODO: do something about this
-        this.enemies = game.add_group(30)
+        this.player = game.add_sprite(w/2, h/2, COLOR.WHITE, COLOR.WHITE)
+        this.player.height = 20
+        this.player.width = 20
+        this.player.collideWorldBounds = true // TODO: doesn't do anything at the moment
+        this.enemies = game.add_group(30, COLOR.WHITE, COLOR.WHITE)
+        this.enemies.set_all('height', 20)
+        this.enemies.set_all('width', 20)
         this.enemies.set_all('outOfBoundsKill', true)
         this.labelScore = game.add_text(
           15,
