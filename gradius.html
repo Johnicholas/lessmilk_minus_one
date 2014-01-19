@@ -1,0 +1,206 @@
+<!doctype html> 
+<html lang="en"> 
+<head>
+	<meta charset="UTF-8" />
+	<title>Lessmilk's Gradius 0</title>
+	<script type="text/javascript" src="framework.js"></script>
+</head>
+<body>
+<canvas id="the_game" width="300" height="500">You need canvas to play this game</canvas>
+<script type="text/javascript">
+// globals
+var w = 300
+var h = 500
+var score = 0
+
+// collision helper methods
+function player_hit(player, enemy) {
+  this.lives -= 1
+  if (this.lives == 0) {
+  	this.lives = 3
+	  this.evolution = 1
+	  game.switch_to('over')
+  }
+
+  enemy.kill();
+  // TODO: recoil
+  // game.add.tween(player).to( { y:this.playerY+20 }, 100, ).to( { y:this.playerY }, 100).start();
+  this.evolution = 1;
+  this.livesText.content = this.lives;
+}
+
+function take_bonus(player, bonus) {
+  bonus.kill()
+  this.evolution += 1
+  this.update_score(100)
+}
+
+function enemy_hit(fire, enemy) {
+  this.emitter.x = enemy.x+enemy.width/2
+  this.emitter.y = enemy.y+enemy.height/2
+  fire.kill()
+  enemy.kill()
+  this.emitter.start(true, 300, null, 10)
+  this.update_score(10)
+}
+
+// a game state has a create method and an update method
+
+var game = new Framework.Game(w, h, 'the_game', {
+  intro: {
+    create: function () {
+      game.backgroundColor = '#2980b9'
+      this.cursor = game.create_keys()
+      var label = game.add_text(
+        w/2,
+        h/2,
+        'gradius 0\n\npress the UP arrow\nkey to start'
+      )
+      label.set_anchor(0.5, 0.5)
+    },
+    update: function () {
+      if (this.cursor.is_down(KEY.UP)) {
+        game.switch_to('play')
+      }
+    }
+  },
+  play: {
+    create: function () {
+      this.fireTime = 0
+      this.bonusTime = 0
+      this.enemyTime = 0
+      this.bulletTime = 0
+      this.lives = 3
+      this.evolution = 1
+      this.playerY = h - 70
+      score = 0 // note we are resetting a global here
+      this.cursor = game.create_keys()
+      
+      this.enemies = game.add_group(20, COLOR.RED, COLOR.RED)
+      this.enemies.set_all('outOfBoundsKill', true)
+
+      this.fires = game.add_group(20, COLOR.RED, COLOR.ORANGE)
+      this.fires.set_all('outOfBoundsKill', true)
+      this.fires.set_all('width', 10)
+      
+      this.bonuses = game.add_group(2, COLOR.GREEN, COLOR.GREEN)
+      this.bonuses.set_all('outOfBoundsKill', true)
+      
+      this.bullets = game.add_group(20, COLOR.BLACK, COLOR.BLACK)
+      this.bullets.set_all('outOfBoundsKill', true)
+      this.bullets.set_all('width', 25)
+      this.bullets.set_all('height', 25)
+      
+      this.player = game.add_sprite(w/2, this.playerY, COLOR.BLUE, COLOR.BLUE)
+      this.player.collideWorldBounds = true // TODO
+      this.player.width = 40
+      
+      this.emitter = game.add_emitter(0, 0, 200)
+      this.emitter.make_particles('pixel') // TODO
+      this.emitter.gravity = 0
+      
+      this.livesText = game.add_text(w-25, 10, this.lives)
+      this.scoreText = game.add_text(10, 10, "0")
+    },
+    update: function() {
+      // player control
+      this.player.velocity_x = 0
+      if (this.cursor.is_down(KEY.LEFT)) {
+        this.player.velocity_x = -350
+      } else if (this.cursor.is_down(KEY.RIGHT)) {
+        this.player.velocity_x = 350
+      }
+
+      // refractory task, spawn a new fire
+      if (game.now() > this.fireTime && this.cursor.is_down(KEY.UP) ) {
+        this.fireTime = game.now() + 300
+
+        if (this.evolution == 1) {
+          this.fire_one(this.player.x+this.player.width/2, this.player.y)
+        } else if (this.evolution == 2) {
+          this.fire_one(this.player.x+this.player.width*1/4, this.player.y)
+          this.fire_one(this.player.x+this.player.width*3/4, this.player.y)
+        } else {
+          this.fire_one(this.player.x, this.player.y)
+          this.fire_one(this.player.x+this.player.width/2, this.player.y);
+          this.fire_one(this.player.x+this.player.width, this.player.y);
+        }
+        // TODO: recoil
+        // this.playerY = this.playerY + 5
+        // game.add_tween(this.player, { y: this.playerY }, 50)
+      }
+      
+      // periodic task, spawn a new enemy
+      if (game.now() > this.enemyTime) {
+        this.enemyTime = game.now() + 250
+        var enemy = this.enemies.get_first_exists(false)
+        if (enemy) {
+          // enemy.set_size(enemy.width, enemy.height/2)
+          enemy.reset(rand(w/enemy.width-1)*enemy.width+7, -enemy.height)
+          enemy.velocity_y = 300
+        }
+      }
+      
+      // periodic task, spawn a new bullet
+      if (game.now() > this.bulletTime) {
+        this.bulletTime = game.now() + 1000 - score/2
+        var bullet = this.bullets.get_first_exists(false)
+        if (bullet) {
+          bullet.reset(rand(w-bullet.width), -bullet.height)
+          bullet.velocity_y = 350
+        }
+      }
+
+      // periodic task, spawn a new bonus	  
+      if (game.now() > this.bonusTime) {
+        this.bonusTime = game.now() + 5000
+        var bonus = this.bonuses.get_first_exists(false)
+        if (bonus) {
+          bonus.reset(rand(w-bonus.width)+bonus.width/2, -bonus.height/2)
+          bonus.velocity_y=150
+          bonus.set_anchor(0.5, 0.5)
+          game.add_tween(bonus, {angle: 360}, 3500)
+        }
+      }
+
+      game.overlap(this.player, this.enemies, player_hit, this)
+      game.overlap(this.fires, this.enemies, enemy_hit, this)
+      game.overlap(this.player, this.bonuses, take_bonus, this)
+      game.overlap(this.player, this.bullets, player_hit, this)
+    },
+    fire_one: function (x, y) {
+      var fire = this.fires.get_first_exists(false)
+      if (fire) {
+        fire.reset(x-fire.width/2, y-fire.height)
+        fire.velocity_y = -500
+      }
+    },
+    update_score: function (n) {
+      score += n // note updating a global
+      this.scoreText.content = score
+    }
+    },
+  over: {
+    create: function () {
+      var label = game.add_text(
+        w/2,
+        h/2,
+        'game over\n\nscore: '+score+'\n\npress the UP arrow\nkey to restart',
+        { font: '30px Arial', fill: '#fff', align: 'center' }
+      )
+      label.set_anchor(0.5, 0.5)
+      this.cursor = game.create_keys()
+      this.time = game.now() + 800
+    },
+    update: function() {
+      if (game.now() > this.time && this.cursor.is_down(KEY.UP)) {
+        game.switch_to('play')
+      }
+    }
+  }
+})
+
+game.start('intro')
+</script>
+</body>
+</html>
