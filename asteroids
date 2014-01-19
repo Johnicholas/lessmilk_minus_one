@@ -1,0 +1,144 @@
+<!doctype html> 
+<html lang="en"> 
+<head>
+	<meta charset="UTF-8" />
+	<title>Adamatomic's asteroids</title>
+	<script type="text/javascript" src="framework.js"></script>
+</head>
+<body>
+<canvas id="the_game" width="500" height="500">You need canvas to play this game</canvas>
+<script type="text/javascript">
+// globals
+var w = 500
+var h = 500
+
+// helper functions
+function hit(obj1, obj2) {
+  obj1.exists = false
+  obj2.exists = false
+}
+
+function wrap(obj) {
+  if (obj.x < 0) {
+    obj.x = w
+  } else if (obj.x > w) {
+    obj.x = 0
+  }
+  if (obj.y < 0) {
+    obj.y = h
+  } else if (obj.y > h) {
+    obj.y = 0
+  }
+}
+
+var game = new Framework.Game(w, h, 'the_game', {
+  lobby: {
+    create: function () {
+      game.backgroundColor = COLOR.DARK
+	    label1 = game.add_text(w/2, h/2-20, 'Asteroids!')
+	    label2 = game.add_text(w/2, h/2+20, 'press asdw or space to start')
+		  label1.set_anchor(0.5, 0.5)
+		  label2.set_anchor(0.5, 0.5)
+      this.keys = game.create_keys()
+    },
+    update: function () {
+      if (this.keys.is_down(KEY.A) ||
+          this.keys.is_down(KEY.S) ||
+          this.keys.is_down(KEY.D) ||
+          this.keys.is_down(KEY.W) ||
+          this.keys.is_down(KEY.SPACE)) {
+        game.switch_to('play')
+      }
+    }
+  },
+  play: {
+    create: function () {
+      this.keys = game.create_keys()
+      // TODO: scatter some stars around the background
+
+      this.asteroids = game.add_group(32, COLOR.WHITE, COLOR.WHITE)
+
+      this.ship = game.add_sprite(w/2, h/2, COLOR.GREEN, COLOR.GREEN)
+      this.ship.set_anchor(0.5, 0.5)
+      this.ship.velocity_x = 0
+      this.ship.velocity_y = 0
+      this.ship.angle = 90
+      
+      this.bullets = game.add_group(5, COLOR.RED, COLOR.ORANGE)
+      this.bullets.set_all('width', 10)
+      this.bullets.set_all('height', 10)
+      this.bullets.set_all('outOfBoundsKill', true)
+      
+      this.bullet_time = 0
+      this.asteroid_time = 0
+    },
+    update: function () {
+      // ship control
+      if (this.keys.is_down(KEY.W)) {
+        this.ship.velocity_x += 2 * Math.cos(this.ship.angle * Math.PI / 180)
+        this.ship.velocity_y -= 2 * Math.sin(this.ship.angle * Math.PI / 180)
+      } else {
+        this.ship.velocity_x *= 0.995
+        this.ship.velocity_y *= 0.995
+      }
+      if (this.keys.is_down(KEY.A)) {
+        this.ship.angle += 1
+      } else if (this.keys.is_down(KEY.D)) {
+        this.ship.angle -= 1
+      }
+
+      // bullet spawning
+      if (game.now() > this.bullet_time && this.keys.is_down(KEY.SPACE)) {
+        var bullet = this.bullets.get_first_exists(false)
+        if (bullet) {
+          this.bullet_time = game.now() + 500
+          bullet.reset(this.ship.x, this.ship.y)
+          bullet.velocity_x = this.ship.velocity_x
+          bullet.velocity_x += 200 * Math.cos(this.ship.angle * Math.PI / 180)
+          bullet.velocity_y = this.ship.velocity_y
+          bullet.velocity_y -= 200 * Math.sin(this.ship.angle * Math.PI / 180)
+        }
+      }
+
+      // count down the spawn_asteroid timer and spawn if we get there
+      if (game.now() > this.asteroid_time) {
+        var a = this.asteroids.get_first_exists(false)
+        if (a) {
+          switch (rand(4)) {
+            case 0: a.reset(a.width/2, rand(h-a.height)+a.height/2); break;
+            case 1: a.reset(rand(w-a.width)+a.width/2, a.height/2); break;
+            case 2: a.reset(w-a.width/2, rand(h-a.height)+a.height/2); break;
+            case 3: a.reset(rand(rand(w-a.width)+a.width/2), h-a.h/2); break;
+          }
+          a.set_anchor(0.5, 0.5)
+          a.angle = rand(360)
+          a.velocity_x = rand(100) - 50
+          a.velocity_y = rand(100) - 50
+          this.asteroid_time = game.now() + rand(1000) + 4000
+        }
+      }
+
+      // bullets smash into asteroids
+      game.overlap(this.bullets, this.asteroids, hit)
+      // asteroids smash into the ship
+      game.overlap(this.ship, this.asteroids, hit)
+
+      // TODO: bounce asteroids off each other
+      // game.collide(this.asteroids)
+
+      // wrap space
+      wrap(this.ship)
+      this.asteroids.for_each_alive(wrap)
+      
+      // if the ship dies, we just start over
+      if (!this.ship.exists) {
+        game.switch_to('intro')
+      }
+    }
+	}
+})
+                
+game.start('lobby')
+</script>
+</body>
+</html>
