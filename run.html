@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>LessMilk's Run</title>
+<script type="text/javascript" src="framework.js"></script>
+</head>
+<body>
+<canvas id="the_game" width="350" height="350">You need canvas to play this game</canvas>
+<script type="text/javascript">
+// globals
+var w = 350
+var h = 350
+var score = 0
+
+// a game state has a create method and an update method
+
+var game = new Framework.Game(w, h, 'the_game', {
+    play: {
+      create: function () {
+        this.keys = game.create_keys()
+        this.player = game.add_sprite(w/2, h/2)
+        this.player.collideWorldBounds = true // TODO: do something about this
+        this.enemies = game.add_group(30)
+        this.enemies.set_all('outOfBoundsKill', true)
+        this.labelScore = game.add_text(
+          15,
+          10,
+          'score: 0'
+        )
+        this.labelKeys = game.add_text(
+          Math.floor(w/2)+1,
+          h-50,
+          'use the arrow keys to move'
+        )
+        this.labelKeys.set_anchor(0.5, 1)
+        this.enemyTime = 0
+        this.scoreTime = 0
+        score = 0 // reset the global score
+        this.firstKey = false
+      },
+      update: function () {
+        // if the player has demonstrated that they can press up,
+        // fade out the 'use the arrow keys to move' message
+        if (this.keys.is_down(KEY.UP) && !this.firstKey) {
+          this.firstKey = true
+          game.add_tween(this.labelKeys, { alpha: 0 }, 800)
+        }
+        // handles the player's 8-way movement
+        this.player.velocity_x = 0
+        this.player.velocity_y = 0
+        if (this.keys.is_down(KEY.LEFT) && !this.keys.is_down(KEY.RIGHT)) {
+          this.player.velocity_x = -300
+        } else if (this.keys.is_down(KEY.RIGHT)) {
+          this.player.velocity_x = 300
+        }
+        if (this.keys.is_down(KEY.UP) && !this.keys.is_down(KEY.DOWN)) {
+          this.player.velocity_y = -300
+        } else if (this.keys.is_down(KEY.DOWN)) {
+          this.player.velocity_y = 300
+        }
+        // periodically create an enemy
+        if (game.now() > this.enemyTime) {
+          this.enemyTime = game.now() + 500
+          var enemy = this.enemies.get_first_exists(false)
+          if (enemy) {
+            enemy.set_anchor(0.5, 0.5)
+            var randu = rand(4)
+            if (randu == 0) {
+              x = rand(w)
+              y = -enemy.height/2+2
+              tox = rand(w)
+              toy = h + enemy.height
+            } else if (randu == 1) {
+              x = rand(w)
+              y = h + enemy.height/2-2
+              tox = rand(w)
+              toy = -enemy.height
+            } else if (randu == 2) {
+              x = -enemy.width/2+2
+              y = rand(h)
+              tox = w + enemy.width
+              toy = rand(h)
+            } else if (randu == 3) {
+              x = w + enemy.width/2-2
+              y = rand(h)
+              tox = -enemy.width
+              toy = rand(h)
+            }	
+            enemy.reset(x, y)
+            // TODO: need better collision detection in framework before rotating enemies
+            // enemy.angle = 90 + Math.atan2(y - toy, x - tox) * 180 / Math.PI
+            game.add_tween(enemy, { x: tox, y: toy }, 3000)
+          }
+        }
+        // periodically increment score
+        if (game.now() > this.scoreTime) {
+          this.scoreTime = game.now() + 1000
+          score += 1
+          this.labelScore.content = 'score: ' + score
+        }
+        // handle collisions between player and enemies
+        game.overlap(
+          this.player,
+          this.enemies,
+          function () { game.switch_to('over') }
+        )
+      }
+    },
+    over: {
+      create: function () {
+        var label = game.add_text(
+          w/2,
+          h/2,
+          'game over\n\nscore: '+score+'\n\npress the UP arrow key\nto restart'
+        )
+        label.set_anchor(0.5, 0.5) // TODO: get label anchors working
+        this.keys = game.create_keys()
+        this.time = game.now() + 800
+      },
+      update: function () {
+        if (game.now() > this.time && this.keys.is_down(KEY.UP)) {
+          game.switch_to('play')
+        }
+      }
+    }
+  }
+)
+
+game.start('play')
+</script>
+</body>
