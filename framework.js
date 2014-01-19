@@ -18,7 +18,9 @@ COLOR = {
   WHITE: '#ffffff',
   GREEN: '#00ff00',
   ORANGE: '#ffa500',
-  RED: '#ff0000'
+  RED: '#ff0000',
+  YELLOW: '#ffff00',
+  BLUE: '#0000ff'
 }
 
 function rand(num) {
