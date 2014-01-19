@@ -1,0 +1,213 @@
+<!doctype html> 
+<html lang="en"> 
+<head>
+	<meta charset="UTF-8" />
+	<title>Lessmilk's Box Jump</title>
+	<script type="text/javascript" src="framework.js"></script>
+</head>
+<body>
+<canvas id="the_game" width="600" height="200">You need canvas to play this game</canvas>
+<script type="text/javascript">
+// globals
+var w = 600
+var h = 200
+var death = 0
+
+var map = [
+	[0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+	[0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0],
+	[0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0],
+	[0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0],
+	[0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 5, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0],
+	[0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+	[0, 0, 5, 5, 5, 0, 0, 0, 0, 2, 3, 0, 0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
+	[0, 0, 0, 0, 2, 0, 0, 0, 5, 0, 0, 0, 0, 2, 0, 0, 0, 5, 0, 0, 0, 3],
+	[0, 0, 0, 0, 2, 3, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 2, 2, 0, 0],
+	[0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 1, 2, 3, 0, 0, 0],
+	[0, 0, 0, 2, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 2],
+	[0, 0, 5, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 2],
+	[0, 0, 1, 0, 0, 0, 0, 0, 2, 0, 0, 0, 5, 0, 0, 0, 2, 2, 2, 0, 0, 5],
+	[0, 0, 0, 0, 2, 3, 2, 0, 0, 0, 5, 5, 0, 0, 0, 2, 3, 2, 0, 0, 0, 0],
+	[0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 3, 0, 0, 0, 5, 0, 0, 0, 0, 2],
+	[0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0],
+	[0, 0, 0, 0, 4, 0, 0, 0, 0, 5, 0, 0, 0, 3, 3, 0, 0, 0, 0, 5, 0, 0],
+	[0, 0, 0, 0, 0, 5, 0, 0, 2, 2, 0, 0, 0, 0, 5, 5, 0, 0, 0, 4, 0, 0],
+	[0, 0, 0, 0, 1, 4, 1, 0, 0, 0, 0, 1, 4, 1, 0, 0, 0, 0, 0, 1, 4, 1],
+	[0, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 0, 2, 0, 0]
+]
+
+function playerJump() {
+  this.player.velocity_y = -250
+  this.rotation = game.add_tween(this.player, {angle: this.player.angle - 180}, 700)
+}
+
+function playerHit(player, hit) {
+  if (this.player.alive) {
+    this.player.alive = false
+    
+    // TODO: explosion
+    // this.emitter.x = player.x + player.width/2
+    // this.emitter.y = player.y + player.height/2
+    // this.emitter.start(true, 300, null, 8)
+    
+    death += 1
+    this.labelDeath.content = death
+    initPlayer.call(this)
+  }
+}
+
+function loadLevel() {
+  if (map.length == this.level) {
+    game.switch_to('end')
+  } else {
+    drawLevel.call(this, map[this.level])
+    this.level++
+    this.labelLevel.content = this.level + '/' + map.length
+    initPlayer.call(this)
+  }
+  if (this.level == 2) {
+    this.labelTuto.content = ''
+  }
+}
+
+function initPlayer() {
+  this.player.gravity_y = 0
+  this.player.x = 60
+  this.player.y = h*2/3-this.player.height/2-30
+  this.player.velocity_x = 0
+  this.player.velocity_y = 0
+  this.player.angle = 0
+  if (this.rotation) {
+    this.rotation.pause()
+  }
+}
+
+function drawLevel(maap) {
+  this.cubes.for_each_alive(function(cube) {
+    cube.kill()
+  })
+
+  var cube
+  var height
+  for (var i = 0; i < maap.length; i++) {
+    cube = this.cubes.get_first_exists(false)
+    
+    if (maap[i] == 1) {
+      cube.reset(100+i*cube.width, h*2/3)
+      height = 0.3
+    } else if (maap[i] == 2) {
+      cube.reset(100+i*cube.width, h*2/3)
+      height = 1
+    } else if (maap[i] == 3) {
+      cube.reset(100+i*cube.width, h*2/3)
+      height = 1.5
+    } else if (maap[i] == 4) {
+      cube.reset(100+i*cube.width, h*2/3)
+      height = 1.8
+    } else if (maap[i] == 5) {
+      cube.reset(100+i*cube.width, h*2/3-22)
+      height = 0.5
+    }
+    if (maap[i] != 0) {
+			cube.set_anchor(0, 1)
+      cube.height = height * 10
+	  }
+  }
+}
+
+var game = new Framework.Game(w, h, 'the_game', {
+  play: {
+    create: function () {
+      game.backgroundColor = '#9b59b6'
+
+		  this.cursor = game.create_keys()
+
+		  this.player = game.add_sprite(80, h*2/3-20)
+      this.player.height = 10
+      this.player.width = 10
+		  // this.player.bounce_y = 0 // TODO: wtf?
+    	this.player.set_anchor(0.5, 0.5)
+
+		  this.cubes = game.add_group(20)
+      this.cubes.set_all('height', 10)
+      this.cubes.set_all('width', 10)
+
+		  this.line = game.add_sprite(w/2, Math.floor(h*2/3))
+      this.line.width = w - 100
+      this.line.height = 2
+		  this.line.set_anchor(0.5, 0.5)
+		  this.line.immovable = true
+
+	    this.labelDeath = game.add_text(100, h-35, '0')
+		  this.labelDeath.set_anchor(0.5, 0.5)
+	    this.labelLevel = game.add_text(w-100+0.5, h-35, '1/'+map.length)
+		  this.labelLevel.set_anchor(0.5, 0.5)
+		  this.labelTuto = game.add_text(Math.floor(w/2)+0.5, h-35+0.5, 'press space to jump')
+		  this.labelTuto.set_anchor(0.5, 0.5)
+
+		  this.level = 0
+	    this.start = 0
+
+      // TODO: explosion
+	    //this.emitter = game.add.emitter(0, 0, 200)
+	    //this.emitter.makeParticles('pixel')
+	    //this.emitter.gravity = 0
+	    //this.emitter.minParticleSpeed.setTo(-200, -200)
+	    //this.emitter.maxParticleSpeed.setTo(200, 200)
+      
+      loadLevel.call(this)
+    },
+  	update: function () {
+      var touching_down = false
+      if (this.player.y >= this.line.y - this.line.height/2 - this.player.height/2) {
+        touching_down = true
+        this.player.y = this.line.y - this.line.height/2 - this.player.height/2
+        this.player.velocity_y = 0
+      }
+
+      if (this.cursor.is_down(KEY.SPACE) && touching_down) {
+        console.log('start to jump')
+        playerJump.call(this)
+        if (this.start == 0) {
+          this.start = 1
+          this.player.velocity_x = 170
+        }
+      }
+
+      if (this.start == 1 && touching_down) {
+        this.player.alive = true
+        this.player.velocity_x = 170
+      }
+
+      if (this.player.x >= w - 60) {
+        loadLevel.call(this)
+      }
+
+      // TODO: explosion
+      //this.emitter.forEachAlive(function(particle) {
+      //  particle.alpha = game.math.clamp(particle.lifespan / 100, 0, 1)
+      //}, this)
+
+      this.player.gravity_y = 12
+
+      if (this.player.y > this.line.y) {
+        initPlayer.call(this)
+      }
+
+      game.overlap(this.player, this.cubes, playerHit, this)
+    }
+	},
+  end: {
+    create: function () {
+	    label1 = game.add_text(w/2, h/2-20, 'you finished the game! :-D')
+	    label2 = game.add_text(w/2, h/2+20, 'and died '+death+' times\ncan you do better?')
+		  label1.set_anchor(0.5, 0.5)
+		  label2.set_anchor(0.5, 0.5)
+    }
+  }
+})
+
+game.start('play')
+</script>
+</body>
+</html>
