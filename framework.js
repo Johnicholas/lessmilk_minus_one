@@ -1,13 +1,13 @@
 // some key constants
 KEY = {
   SPACE: 32,
-  UP: 37,
-  DOWN: 38,
-  LEFT: 39,
-  RIGHT: 40,
+  LEFT: 37,
+  UP: 38,
+  RIGHT: 39,
+  DOWN: 40,
   A: 65,
-  S: 83,
   D: 68,
+  S: 83,
   W: 87
 }
 
